@@ -13,39 +13,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-
-            // Only target PRs from Exercism
-            if (pr.user.login === 'exercism') {
-
-              console.log(`Approving PR #${pr.number} from Exercism...`);
-
-              // Approve PR
-              await github.pulls.createReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                event: 'APPROVE'
-              });
-
-              console.log(`Merging PR #${pr.number}...`);
-
-              // Merge PR (squash or merge)
-              await github.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                merge_method: 'squash' // change to 'merge' if you want regular merge
-              });
-
-              // Delete branch if it's in your repo
-              if (pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`) {
-                console.log(`Deleting branch ${pr.head.ref}...`);
-                await github.git.deleteRef({
+            // Accept any PR from a bot (like Exercism Solutions Syncer)
+            if (pr.user.type === 'Bot' && pr.user.login.includes('exercism')) {
+                console.log(`Auto-merging PR #${pr.number} from Exercism Bot...`);
+            
+                await github.pulls.merge({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  ref: `heads/${pr.head.ref}`
+                  pull_number: pr.number,
+                  merge_method: 'squash'
                 });
-              }
+            
+                if(pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`){
+                    await github.git.deleteRef({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        ref: `heads/${pr.head.ref}`
+                    });
+                }
             } else {
-              console.log(`PR #${pr.number} is not from Exercism. Skipping.`);
+                console.log(`PR #${pr.number} is not from Exercism Bot. Skipping.`);
             }
+            
