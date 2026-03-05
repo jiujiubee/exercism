@@ -2,9 +2,7 @@ name: Auto-merge Exercism PRs
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-  check_suite:
-    types: [completed]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: write
@@ -12,24 +10,29 @@ permissions:
 
 jobs:
   auto-merge:
-    if: github.event.pull_request.user.login == 'exercism-solutions-syncer[bot]'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: pascalgn/automerge-action@v0.16.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MERGE_LABELS: ""
-          MERGE_METHOD: squash
-          
-  delete-branch:
     if: >
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true
+      github.event.pull_request.user.login == 'exercism-solutions-syncer[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'exercism-sync/')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Delete Exercism sync branch
+      - name: Enable auto-merge
         run: |
-          git push origin --delete "${{ github.event.pull_request.head.ref }}"
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --squash \
+            --auto \
+            --delete-branch
+        env:
+           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  # delete-branch:
+  #   if: >
+  #     github.event_name == 'pull_request' &&
+  #     github.event.action == 'closed' &&
+  #     github.event.pull_request.merged == true
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Delete Exercism sync branch
+  #       run: |
+  #         git push origin --delete "${{ github.event.pull_request.head.ref }}"
