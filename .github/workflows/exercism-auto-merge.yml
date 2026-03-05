@@ -21,3 +21,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MERGE_LABELS: ""
           MERGE_METHOD: squash
+          
+  delete-branch:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete Exercism sync branch
+        run: |
+          git push origin --delete "${{ github.event.pull_request.head.ref }}"
